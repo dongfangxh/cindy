@@ -387,7 +387,7 @@ describe('browserExtensionSlot · 管子上行', () => {
     let now = 1_000_000;
     let installs = 0;
     let state: 'ready' | 'unavailable' = 'unavailable';
-    const { slot, bridges, settle, ghosts } = await makeSlot({
+    const { slot, bridges, ghosts } = await makeSlot({
       now: () => now,
       createNativeBinding: () => ({
         token: 'f'.repeat(64),
@@ -403,8 +403,9 @@ describe('browserExtensionSlot · 管子上行', () => {
       }),
     });
     slot.reconcile(ghosts);
-    await settle();
-    expect(installs).toBe(1);
+    // CI run 41580150352: policy I/O can outlast settle's 25 ms on Windows.
+    // Wait for the initial installation before testing status-driven retries.
+    await vi.waitFor(() => expect(installs).toBe(1));
     await slot.handleRequest('_root__my-browser', { kind: 'status' });
     expect(installs).toBe(2);
     expect(bridges).toHaveLength(1);
